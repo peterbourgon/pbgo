@@ -134,4 +134,3 @@ func TestWithin(t *testing.T) {
 	assert.Within(r, 0, 0.1, 5)
 	assert.True(t, r.failed)
 }
-

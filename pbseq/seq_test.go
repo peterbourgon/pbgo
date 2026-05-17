@@ -103,13 +103,14 @@ func FuzzMerge(f *testing.F) {
 		}
 		ai, bi, ci := toSorted(a), toSorted(b), toSorted(c)
 
-		got := slices.Collect(pbseq.Merge(cmp.Less[int],
+		have := slices.Collect(pbseq.Merge(
+			cmp.Less[int],
 			pbseq.FromSlice(ai),
 			pbseq.FromSlice(bi),
 			pbseq.FromSlice(ci),
 		))
 
-		assert.True(t, slices.IsSorted(got))
-		assert.Equal(t, len(ai)+len(bi)+len(ci), len(got))
+		assert.True(t, slices.IsSorted(have))
+		assert.Equal(t, len(ai)+len(bi)+len(ci), len(have))
 	})
 }

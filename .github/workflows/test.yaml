@@ -1,0 +1,49 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.mod
+
+      - name: Cache tool binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: ${{ runner.os }}-gotools-${{ hashFiles('go.mod') }}
+
+      - name: Install tools
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install mvdan.cc/gofumpt@latest
+
+      - name: gofmt
+        run: diff -u /dev/null <(gofmt -d .)
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: staticcheck
+        run: staticcheck ./...
+
+      - name: gofumpt
+        run: gofumpt -d -e -l .
+
+      - name: go test
+        run: go test -race -count=1 ./...

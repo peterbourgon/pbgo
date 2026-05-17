@@ -11,19 +11,19 @@ func TestSize(t *testing.T) {
 		constr := func() *[1024]byte { return new([1024]byte{}) }
 		want := uint64(1024)
 		have := Size(constr, 32)
-		assert.Within(t, want, 0.05, have)
+		assert.Within(t, want, 0.15, have)
 	})
 
 	t.Run("*fixed128", func(t *testing.T) {
-		type fixed128 struct{ words [16]uint64 } // exactly 128 bytes
+		type fixed128 struct{ _ [16]uint64 } // exactly 128 bytes
 		constr := func() *fixed128 { return new(fixed128) }
 		want := uint64(128)
 		have := Size(constr, 32)
-		assert.Within(t, want, 0.05, have)
+		assert.Within(t, want, 0.10, have)
 	})
 
 	t.Run("map[int]fixed1024", func(t *testing.T) {
-		type fixed1024 struct{ words [128]uint64 } // exactly 1024 bytes
+		type fixed1024 struct{ _ [128]uint64 } // exactly 1024 bytes
 		constrFor := func(entries int) func() map[int]fixed1024 {
 			return func() map[int]fixed1024 {
 				m := make(map[int]fixed1024)

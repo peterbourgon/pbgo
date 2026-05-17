@@ -1,0 +1,67 @@
+name: tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Explicit tag v0.x.y or leave blank to auto-bump patch'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run (compute tag but do not push)'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       contains(github.event.pull_request.labels.*.name, 'release'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: madhead/semver-utils@v5
+        if: github.event_name == 'workflow_dispatch' && inputs.tag != ''
+        id: semver
+        with:
+          version: ${{ inputs.tag }}
+          lenient: false
+
+      - name: Push explicit tag
+        if: github.event_name == 'workflow_dispatch' && inputs.tag != ''
+        env:
+          TAG: ${{ inputs.tag }}
+          MAJOR: ${{ steps.semver.outputs.major }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$MAJOR" != "0" ]; then
+            echo "Tag must be v0.x.y (got major=$MAJOR)" >&2
+            exit 1
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: would push tag $TAG"
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Bump existing tag
+        uses: mathieudutour/github-tag-action@v6.2
+        if: github.event_name != 'workflow_dispatch' || inputs.tag == ''
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          tag_prefix: v
+          dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
