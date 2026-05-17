@@ -1,9 +1,11 @@
+// Package pbseq provides utilities for working with [iter.Seq] sequences.
 package pbseq
 
 import (
 	"iter"
 )
 
+// Limit returns a sequence that yields at most the first n values of seq.
 func Limit[T any](seq iter.Seq[T], n int) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		if seq == nil {
@@ -20,6 +22,7 @@ func Limit[T any](seq iter.Seq[T], n int) iter.Seq[T] {
 	}
 }
 
+// Transform returns a sequence that applies fn to each value of seq.
 func Transform[T1, T2 any](seq iter.Seq[T1], fn func(T1) T2) iter.Seq[T2] {
 	return func(yield func(T2) bool) {
 		if seq == nil {
@@ -31,6 +34,8 @@ func Transform[T1, T2 any](seq iter.Seq[T1], fn func(T1) T2) iter.Seq[T2] {
 	}
 }
 
+// Filter returns a sequence containing only the values of seq for which fn
+// returns true.
 func Filter[T any](seq iter.Seq[T], fn func(T) bool) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		if seq == nil {
@@ -45,6 +50,7 @@ func Filter[T any](seq iter.Seq[T], fn func(T) bool) iter.Seq[T] {
 	}
 }
 
+// FromSlice returns a sequence that yields the elements of slice in order.
 func FromSlice[T any](slice []T) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for _, t := range slice {
@@ -55,6 +61,7 @@ func FromSlice[T any](slice []T) iter.Seq[T] {
 	}
 }
 
+// ToSlice collects seq into a new slice.
 func ToSlice[T any](seq iter.Seq[T]) []T {
 	var res []T
 	seq(func(t T) bool {
@@ -64,15 +71,22 @@ func ToSlice[T any](seq iter.Seq[T]) []T {
 	return res
 }
 
+// Concat returns a sequence that yields the values of each input sequence in
+// order, moving to the next once the previous is exhausted.
 func Concat[T any](seqs ...iter.Seq[T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for _, seq := range seqs {
 			if seq == nil {
 				continue
 			}
-			seq(func(t T) bool {
+			var stopped bool
+			seq(func(t T) (res bool) {
+				defer func() { stopped = stopped || !res }()
 				return yield(t)
 			})
+			if stopped {
+				return
+			}
 		}
 	}
 }
@@ -85,9 +99,9 @@ func Concat[T any](seqs ...iter.Seq[T]) iter.Seq[T] {
 // been exhausted, or when the yield function returns false. Output order for
 // values considered equal by the less function is not stable.
 //
-// Merge is efficient and operates in O(n log k) time, where n is the total
-// number of elements across all input sequences and k is the number of input
-// sequences.
+// Merge runs in O(n·k) time, where n is the total number of elements across
+// all input sequences and k is the number of input sequences, as each output
+// element is selected via a linear scan of the heads of the input sequences.
 func Merge[T any](less func(T, T) bool, seqs ...iter.Seq[T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		type source struct {

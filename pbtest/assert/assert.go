@@ -1,95 +1,100 @@
+// Package assert provides minimal assertion helpers for tests.
 package assert
 
 import (
 	"cmp"
 	"errors"
-	"fmt"
 	"math"
 	"reflect"
 	"slices"
 	"testing"
 )
 
-func NoErr(tb testing.TB, err error, args ...any) {
+// NoErr fails the test if err is non-nil.
+func NoErr(tb testing.TB, err error) {
 	tb.Helper()
 	if err != nil {
-		tb.Fatalf("%s: %v", getPrefix("NoErr", args...), err)
+		tb.Fatalf("NoErr: %v", err)
 	}
 }
 
-func Err(tb testing.TB, err error, args ...any) {
+// Err fails the test if err is nil.
+func Err(tb testing.TB, err error) {
 	tb.Helper()
 	if err == nil {
-		tb.Fatalf("%s: want error, have nil", getPrefix("Err", args...))
+		tb.Fatalf("Err: want error, have nil")
 	}
 }
 
-func ErrIs(tb testing.TB, want, have error, args ...any) {
+// ErrIs fails the test if [errors.Is](have, want) is false.
+func ErrIs(tb testing.TB, want, have error) {
 	tb.Helper()
 	if !errors.Is(have, want) {
-		tb.Fatalf("%s: want error %v, have %v", getPrefix("ErrIs", args...), want, have)
+		tb.Fatalf("ErrIs: want error %v, have %v", want, have)
 	}
 }
 
-func Equal[T comparable](tb testing.TB, want, have T, args ...any) {
+// Equal fails the test if want != have.
+func Equal[T comparable](tb testing.TB, want, have T) {
 	tb.Helper()
 	if want != have {
-		tb.Fatalf("%s: want %v, have %v", getPrefix("Equal", args...), want, have)
+		tb.Fatalf("Equal: want %v, have %v", want, have)
 	}
 }
 
-func DeepEqual(tb testing.TB, want, have any, args ...any) {
+// DeepEqual fails the test if want and have are not [reflect.DeepEqual].
+func DeepEqual(tb testing.TB, want, have any) {
 	tb.Helper()
 	if !reflect.DeepEqual(want, have) {
-		tb.Fatalf("%s: want %v, have %v", getPrefix("DeepEqual", args...), want, have)
+		tb.Fatalf("DeepEqual: want %v, have %v", want, have)
 	}
 }
 
-func True(tb testing.TB, b bool, args ...any) {
+// True fails the test if b is false.
+func True(tb testing.TB, b bool) {
 	tb.Helper()
 	if !b {
-		tb.Fatalf("%s: want true, have false", getPrefix("True", args...))
+		tb.Fatalf("True: want true, have false")
 	}
 }
 
-func False(tb testing.TB, b bool, args ...any) {
+// False fails the test if b is true.
+func False(tb testing.TB, b bool) {
 	tb.Helper()
 	if b {
-		tb.Fatalf("%s: want false, have true", getPrefix("False", args...))
+		tb.Fatalf("False: want false, have true")
 	}
 }
 
-func SlicesEqual[T comparable](tb testing.TB, want, have []T, args ...any) {
+// SlicesEqual fails the test if want and have are not [slices.Equal].
+func SlicesEqual[T comparable](tb testing.TB, want, have []T) {
 	tb.Helper()
 	if !slices.Equal(want, have) {
-		tb.Fatalf("%s: want %v, have %v", getPrefix("SlicesEqual", args...), want, have)
+		tb.Fatalf("SlicesEqual: want %v, have %v", want, have)
 	}
 }
 
-func Between[T cmp.Ordered](tb testing.TB, min, max T, have T, args ...any) {
+// Between fails the test if have is outside the inclusive range [lo, hi].
+func Between[T cmp.Ordered](tb testing.TB, lo, hi T, have T) {
 	tb.Helper()
-	if have < min || max < have {
-		tb.Fatalf("%s: want between %v and %v, have %v", getPrefix("Between", args...), min, max, have)
+	if have < lo || hi < have {
+		tb.Fatalf("Between: want between %v and %v, have %v", lo, hi, have)
 	}
 }
 
-func Within[T ~int | ~uint64 | ~int64 | ~float64](tb testing.TB, want T, tol float64, have T, args ...any) {
+// Within fails the test if have differs from want by more than tol as a
+// fraction of want (e.g. tol=0.05 allows ±5%). When want is zero, Within
+// requires have to be exactly zero.
+func Within[T ~int | ~uint64 | ~int64 | ~float64](tb testing.TB, want T, tol float64, have T) {
 	tb.Helper()
+	if want == 0 {
+		if have != 0 {
+			tb.Fatalf("Within: want 0 +/- %.1f%%, have %v", tol*100, have)
+		}
+		return
+	}
 	off := float64(have-want) / float64(want)
 	if math.Abs(off) > math.Abs(tol) {
-		tb.Fatalf("%s: want %v +/- %.1f%%, have %v (%.1f%%)", getPrefix("Within", args...), want, tol*100, have, off*100)
-	}
-}
-
-func getPrefix(def string, args ...any) (prefix string) {
-	if len(args) <= 0 {
-		return def
-	}
-
-	switch x := args[0].(type) {
-	case string:
-		return fmt.Sprintf(x, args[1:]...)
-	default:
-		return fmt.Sprint(args...)
+		tb.Fatalf("Within: want %v +/- %.1f%%, have %v (%.1f%%)", want, tol*100, have, off*100)
 	}
 }

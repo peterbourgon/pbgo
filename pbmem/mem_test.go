@@ -1,4 +1,4 @@
-package memory
+package pbmem
 
 import (
 	"testing"

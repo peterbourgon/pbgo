@@ -1,5 +1,5 @@
-// Package memory provides test helpers for measuring runtime memory usage.
-package memory
+// Package pbmem provides test helpers for measuring runtime memory usage.
+package pbmem
 
 import (
 	"runtime"
@@ -19,12 +19,8 @@ type Stats struct {
 // Measure samples the heap bytes retained by one value returned from constr,
 // n times, and returns summary statistics. The first sample is discarded to
 // exclude one-time bookkeeping (e.g. the internal retention slice's backing
-// array, lazy first-call initialization inside constr). Panics if n <= 0.
-//
-// Each sample brackets a single constr() call with two runtime.GC() calls
-// before and after reading runtime.MemStats. The second GC in each pair
-// blocks until the first GC's sweep phase has completed, reducing bias from
-// concurrent sweep activity that would otherwise leak between samples.
+// array, lazy first-call initialization inside constr). n is clamped to a
+// minimum of 1.
 func Measure[T any](constr func() T, n int) Stats {
 	n = max(1, n)
 
@@ -76,7 +72,7 @@ func Measure[T any](constr func() T, n int) Stats {
 // Size returns the median heap bytes retained by one value returned from
 // constr, sampled n times. It is a thin wrapper over Measure that returns
 // only the median; use Measure directly to see min, max, mean, and sample
-// count. Panics if n <= 0.
+// count. n is clamped to a minimum of 1.
 func Size[T any](constr func() T, n int) uint64 {
 	return Measure(constr, n).Median
 }
