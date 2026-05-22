@@ -38,6 +38,21 @@ func FirstDefault[T any](s []T, fn func(T) bool, defaultValue T) T {
 	return defaultValue
 }
 
+// Partition s into two slices, the first containing the elements for which fn
+// returns true, and the second containing the elements for which fn returns
+// false. The order of elements in the output slices is the same as in the input
+// slice.
+func Partition[T any](s []T, fn func(T) bool) (a, b []T) {
+	for _, v := range s {
+		if fn(v) {
+			a = append(a, v)
+		} else {
+			b = append(b, v)
+		}
+	}
+	return a, b
+}
+
 // Sort sorts s in place using cmp and returns it.
 func Sort[T any](s []T, cmp func(a, b T) int) []T {
 	slices.SortFunc(s, cmp)

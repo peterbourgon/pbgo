@@ -55,6 +55,27 @@ func TestFirstDefault(t *testing.T) {
 	})
 }
 
+func TestPartition(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		input := []int{1, 2, 3, 4, 5}
+		fn := func(x int) bool { return x%2 == 0 }
+		wanta := []int{2, 4}
+		wantb := []int{1, 3, 5}
+		havea, haveb := pbslices.Partition(input, fn)
+		assert.SlicesEqual(t, wanta, havea)
+		assert.SlicesEqual(t, wantb, haveb)
+	})
+	t.Run("all pass", func(t *testing.T) {
+		input := []int{2, 4, 6}
+		fn := func(x int) bool { return x%2 == 0 }
+		wanta := []int{2, 4, 6}
+		wantb := []int(nil)
+		havea, haveb := pbslices.Partition(input, fn)
+		assert.DeepEqual(t, wanta, havea)
+		assert.DeepEqual(t, wantb, haveb)
+	})
+}
+
 func TestSort(t *testing.T) {
 	input := []int{3, 1, 4, 1, 5, 9}
 	cmpFn := cmp.Compare[int]
