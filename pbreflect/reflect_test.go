@@ -1,6 +1,7 @@
 package pbreflect_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/peterbourgon/pbgo/pbreflect"
@@ -8,37 +9,40 @@ import (
 )
 
 func TestDirectlyImplements(t *testing.T) {
-	_, ok := pbreflect.DirectlyImplements[Fooer](MyStruct{})
-	assert.True(t, ok)
-
-	_, ok = pbreflect.DirectlyImplements[Fooer](MyEmbed{})
-	assert.False(t, ok)
-
-	_, ok = pbreflect.DirectlyImplements[Fooer](NoMethod{})
-	assert.False(t, ok)
-
-	_, ok = pbreflect.DirectlyImplements[Fooer](MyEmbedPtr{})
-	assert.False(t, ok)
-
-	_, ok = pbreflect.DirectlyImplements[Fooer](PtrRecvr{})
-	assert.False(t, ok)
-
-	_, ok = pbreflect.DirectlyImplements[Fooer](&PtrRecvr{})
-	assert.True(t, ok)
+	for _, tc := range []struct {
+		x    any
+		want bool
+	}{
+		{PtrRecvr{}, false},
+		{&PtrRecvr{}, true},
+		{ValRecvr{}, true},
+		{&ValRecvr{}, true},
+		{EmbedPtrRecvr{}, false},
+		{&EmbedPtrRecvr{}, false},
+		{EmbedPtrPtrRecvr{}, false},
+		{&EmbedPtrPtrRecvr{}, false},
+		{NoMethod{}, false},
+		{&NoMethod{}, false},
+	} {
+		t.Run(fmt.Sprintf("%T", tc.x), func(t *testing.T) {
+			_, ok := pbreflect.DirectlyImplements[Fooer](tc.x)
+			assert.Equal(t, tc.want, ok)
+		})
+	}
 }
 
 type Fooer interface{ Foo() }
 
-type MyStruct struct{}
-
-func (MyStruct) Foo() {}
-
-type MyEmbed struct{ MyStruct }
-
-type NoMethod struct{}
-
-type MyEmbedPtr struct{ *MyStruct }
-
-type PtrRecvr struct{ MyStruct }
+type PtrRecvr struct{}
 
 func (*PtrRecvr) Foo() {}
+
+type ValRecvr struct{}
+
+func (ValRecvr) Foo() {}
+
+type EmbedPtrRecvr struct{ PtrRecvr }
+
+type EmbedPtrPtrRecvr struct{ *PtrRecvr }
+
+type NoMethod struct{}
