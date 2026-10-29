@@ -8,8 +8,8 @@ import (
 	"github.com/peterbourgon/pbgo/pbtest/assert"
 )
 
-func TestSafe(t *testing.T) {
-	s := pbsync.NewSafe(1)
+func TestValue(t *testing.T) {
+	s := pbsync.NewValue(1)
 	assert.Equal(t, 1, s.Get())
 
 	prev := s.Set(2)
@@ -17,8 +17,8 @@ func TestSafe(t *testing.T) {
 	assert.Equal(t, 2, s.Get())
 }
 
-func TestSafeZeroValue(t *testing.T) {
-	var s pbsync.Safe[int]
+func TestValueZeroValue(t *testing.T) {
+	var s pbsync.Value[int]
 	assert.Equal(t, 0, s.Get())
 
 	prev := s.Set(42)
@@ -26,8 +26,8 @@ func TestSafeZeroValue(t *testing.T) {
 	assert.Equal(t, 42, s.Get())
 }
 
-func TestSafeConcurrent(t *testing.T) {
-	s := pbsync.NewSafe(0)
+func TestValueConcurrent(t *testing.T) {
+	s := pbsync.NewValue(0)
 	var wg sync.WaitGroup
 	for i := range 10 {
 		wg.Go(func() {

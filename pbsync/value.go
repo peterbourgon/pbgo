@@ -2,28 +2,28 @@ package pbsync
 
 import "sync"
 
-// Safe provides mutex-guarded access to a value of type T.
-type Safe[T any] struct {
+// Value provides mutex-guarded access to a value of type T.
+type Value[T any] struct {
 	mtx sync.Mutex
 	val T
 }
 
-// NewSafe returns a new [Safe] initialized with val.
-func NewSafe[T any](val T) *Safe[T] {
-	return &Safe[T]{
+// NewValue returns a new [Value] initialized with val.
+func NewValue[T any](val T) *Value[T] {
+	return &Value[T]{
 		val: val,
 	}
 }
 
 // Get returns the current value.
-func (s *Safe[T]) Get() T {
+func (s *Value[T]) Get() T {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	return s.val
 }
 
 // Set stores val and returns the previous value.
-func (s *Safe[T]) Set(val T) T {
+func (s *Value[T]) Set(val T) T {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	prev := s.val
