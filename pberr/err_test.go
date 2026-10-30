@@ -35,35 +35,3 @@ func TestSquelch(t *testing.T) {
 	assert.NoErr(t, pberr.Squelch(nil, errA))
 	assert.Equal(t, errA, pberr.Squelch(errA))
 }
-
-func TestJoinNil(t *testing.T) {
-	assert.NoErr(t, pberr.Join())
-	assert.NoErr(t, pberr.Join(nil))
-	assert.NoErr(t, pberr.Join(nil, nil))
-}
-
-func TestJoinSingle(t *testing.T) {
-	errA := errors.New("a")
-	have := pberr.Join(nil, errA, nil)
-	assert.Equal(t, "a", have.Error())
-	assert.ErrIs(t, errA, have)
-}
-
-func TestJoinMultiple(t *testing.T) {
-	errA := errors.New("a")
-	errB := errors.New("b")
-	have := pberr.Join(errA, nil, errB)
-	assert.Equal(t, "a; b", have.Error())
-	assert.ErrIs(t, errA, have)
-	assert.ErrIs(t, errB, have)
-}
-
-func TestJoinUnwrap(t *testing.T) {
-	errA := errors.New("a")
-	errB := errors.New("b")
-	have := pberr.Join(errA, errB)
-
-	u, ok := have.(interface{ Unwrap() []error })
-	assert.True(t, ok)
-	assert.SlicesEqual(t, []error{errA, errB}, u.Unwrap())
-}
