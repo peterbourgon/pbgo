@@ -32,7 +32,8 @@ func (am *AtomicMap[K, V]) Get(k K) (V, bool) {
 	am.mtx.RLock()
 	defer am.mtx.RUnlock()
 	if am.m == nil {
-		return *new(V), false
+		var zero V
+		return zero, false
 	}
 	v, ok := am.m[k]
 	return v, ok
@@ -68,17 +69,18 @@ func (am *AtomicMap[K, V]) Set(k K, v V) (previous V, existed bool) {
 	return prev, ok
 }
 
-// Del deletes k from the map, returning the deleted value and true if it
-// existed, or a zero value and false otherwise.
-func (am *AtomicMap[K, V]) Del(k K) (deleted V, existed bool) {
+// Del deletes k from the map and returns the deleted value, whether or not it
+// existed, and the resulting size of the map.
+func (am *AtomicMap[K, V]) Del(k K) (deleted V, existed bool, size int) {
 	am.mtx.Lock()
 	defer am.mtx.Unlock()
 	if am.m == nil {
-		return *new(V), false
+		var zero V
+		return zero, false, 0
 	}
 	prev, ok := am.m[k]
 	delete(am.m, k)
-	return prev, ok
+	return prev, ok, len(am.m)
 }
 
 // Range calls f for each entry in the map under a single read lock. If f
@@ -164,17 +166,12 @@ func (amm *AtomicMapMap[K1, K2, V]) Has(k1 K1, k2 K2) bool {
 
 // Get returns the value for k1 and k2, and true if it exists.
 func (amm *AtomicMapMap[K1, K2, V]) Get(k1 K1, k2 K2) (V, bool) {
-	m, ok := func() (*AtomicMap[K2, V], bool) {
-		amm.mtx.RLock()
-		defer amm.mtx.RUnlock()
-		if amm.mm == nil {
-			return nil, false
-		}
-		m, ok := amm.mm[k1]
-		return m, ok
-	}()
+	amm.mtx.RLock()
+	defer amm.mtx.RUnlock()
+	m, ok := amm.mm[k1]
 	if !ok {
-		return *new(V), false
+		var zero V
+		return zero, false
 	}
 	return m.Get(k2)
 }
@@ -216,17 +213,42 @@ func (amm *AtomicMapMap[K1, K2, V]) Del(k1 K1, k2 K2) (previous V, existed bool)
 	amm.mtx.Lock()
 	defer amm.mtx.Unlock()
 	if amm.mm == nil {
-		return *new(V), false
+		var zero V
+		return zero, false
 	}
 	m, ok := amm.mm[k1]
 	if !ok {
-		return *new(V), false
+		var zero V
+		return zero, false
 	}
-	prev, ok := m.Del(k2)
-	if m.Len() <= 0 {
+	prev, ok, sz := m.Del(k2)
+	if sz <= 0 {
 		delete(amm.mm, k1)
 	}
 	return prev, ok
+}
+
+// Keys returns an iterator over a snapshot of the outer keys in the map,
+// taken when Keys is called.
+func (amm *AtomicMapMap[K1, K2, V]) Keys() iter.Seq[K1] {
+	amm.mtx.RLock()
+	defer amm.mtx.RUnlock()
+	return maps.Keys(maps.Clone(amm.mm))
+}
+
+// AllOf returns an iterator over a snapshot of the inner map stored at k1,
+// taken when AllOf is called, or an empty iterator if k1 doesn't exist.
+func (amm *AtomicMapMap[K1, K2, V]) AllOf(k1 K1) iter.Seq2[K2, V] {
+	m, ok := func() (*AtomicMap[K2, V], bool) {
+		amm.mtx.RLock()
+		defer amm.mtx.RUnlock()
+		m, ok := amm.mm[k1]
+		return m, ok
+	}()
+	if !ok {
+		return func(yield func(K2, V) bool) {}
+	}
+	return m.All()
 }
 
 // All returns an iterator over a snapshot of the outer map taken when the
@@ -234,11 +256,8 @@ func (amm *AtomicMapMap[K1, K2, V]) Del(k1 K1, k2 K2) (previous V, existed bool)
 // [AtomicMap], taken when that inner sequence is iterated.
 func (amm *AtomicMapMap[K1, K2, V]) All() iter.Seq2[K1, iter.Seq2[K2, V]] {
 	return func(yield func(K1, iter.Seq2[K2, V]) bool) {
-		amm.mtx.RLock()
-		snapshot := maps.Clone(amm.mm)
-		amm.mtx.RUnlock()
-		for k1, m := range snapshot {
-			if !yield(k1, m.All()) {
+		for k1 := range amm.Keys() {
+			if !yield(k1, amm.AllOf(k1)) {
 				return
 			}
 		}

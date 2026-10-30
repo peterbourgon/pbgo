@@ -3,6 +3,7 @@ package pbsync_test
 import (
 	"errors"
 	"maps"
+	"slices"
 	"testing"
 
 	"github.com/peterbourgon/pbgo/pbsync"
@@ -32,15 +33,17 @@ func TestAtomicMapSetGetDel(t *testing.T) {
 	assert.True(t, existed)
 	assert.Equal(t, 1, prev)
 
-	deleted, existed := am.Del("x")
+	deleted, existed, size := am.Del("x")
 	assert.True(t, existed)
 	assert.Equal(t, 2, deleted)
+	assert.Equal(t, 0, size)
 	assert.False(t, am.Has("x"))
 	assert.Equal(t, 0, am.Len())
 
-	deleted, existed = am.Del("x")
+	deleted, existed, size = am.Del("x")
 	assert.False(t, existed)
 	assert.Equal(t, 0, deleted)
+	assert.Equal(t, 0, size)
 }
 
 func TestAtomicMapGetOrCreate(t *testing.T) {
@@ -212,6 +215,42 @@ func TestAtomicMapMapAll(t *testing.T) {
 	}
 
 	assert.DeepEqual(t, want, have)
+}
+
+func TestAtomicMapMapKeys(t *testing.T) {
+	var mm pbsync.AtomicMapMap[string, string, int]
+
+	mm.Set("a", "x", 1)
+	mm.Set("b", "y", 2)
+
+	have := slices.Collect(mm.Keys())
+	slices.Sort(have)
+	assert.SlicesEqual(t, []string{"a", "b"}, have)
+}
+
+func TestAtomicMapMapKeysEmpty(t *testing.T) {
+	var mm pbsync.AtomicMapMap[string, string, int]
+
+	have := slices.Collect(mm.Keys())
+	assert.Equal(t, 0, len(have))
+}
+
+func TestAtomicMapMapAllOf(t *testing.T) {
+	var mm pbsync.AtomicMapMap[string, string, int]
+
+	mm.Set("a", "x", 1)
+	mm.Set("a", "y", 2)
+	mm.Set("b", "z", 3)
+
+	have := maps.Collect(mm.AllOf("a"))
+	assert.DeepEqual(t, map[string]int{"x": 1, "y": 2}, have)
+}
+
+func TestAtomicMapMapAllOfMissing(t *testing.T) {
+	var mm pbsync.AtomicMapMap[string, string, int]
+
+	have := maps.Collect(mm.AllOf("missing"))
+	assert.Equal(t, 0, len(have))
 }
 
 func TestAtomicMapMapAllSkipOuter(t *testing.T) {

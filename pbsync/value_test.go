@@ -9,30 +9,30 @@ import (
 )
 
 func TestValue(t *testing.T) {
-	s := pbsync.NewValue(1)
-	assert.Equal(t, 1, s.Get())
+	v := pbsync.NewValue(1)
+	assert.Equal(t, 1, v.Get())
 
-	prev := s.Set(2)
+	prev := v.Set(2)
 	assert.Equal(t, 1, prev)
-	assert.Equal(t, 2, s.Get())
+	assert.Equal(t, 2, v.Get())
 }
 
 func TestValueZeroValue(t *testing.T) {
-	var s pbsync.Value[int]
-	assert.Equal(t, 0, s.Get())
+	var v pbsync.Value[int]
+	assert.Equal(t, 0, v.Get())
 
-	prev := s.Set(42)
+	prev := v.Set(42)
 	assert.Equal(t, 0, prev)
-	assert.Equal(t, 42, s.Get())
+	assert.Equal(t, 42, v.Get())
 }
 
 func TestValueConcurrent(t *testing.T) {
-	s := pbsync.NewValue(0)
+	v := pbsync.NewValue(0)
 	var wg sync.WaitGroup
 	for i := range 10 {
 		wg.Go(func() {
 			for range 1000 {
-				s.Set(i)
+				v.Set(i)
 			}
 		})
 	}
