@@ -1,3 +1,4 @@
+// Package pbreflect provides reflection helpers.
 package pbreflect
 
 import (
