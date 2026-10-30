@@ -43,7 +43,6 @@ func Join(errs ...error) error {
 		return &joinError{
 			errs: es,
 		}
-
 	}
 	return nil
 }
